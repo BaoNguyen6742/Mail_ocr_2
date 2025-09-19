@@ -36,21 +36,23 @@ class OCR_pipeline:
 
         self.vocab = Vocab()
 
-    def ocr(self, image: np.ndarray):
+    def ocr(self, image: np.ndarray, expand_ratio: float = 0):
         sentences = ""
-        addr_img = self.Detec_addr_obb(image)
+        addr_img = self.Detec_addr_obb(image, expand_ratio)
         angle = self.Classify_angle(addr_img)
         rotated = self._rotate_image(addr_img, angle)
         sentences = self.Regcognise_text(rotated)
         return rotated, sentences
 
-    def Detec_addr_obb(self, image: np.ndarray):
+    def Detec_addr_obb(self, image: np.ndarray, expand_ratio):
         orig_h, orig_w = image.shape[:2]
         onnx_image, scale, padx, pady = self._preprocess_yolo_obb(image)
         yolo_onnx_out = self.yolo_obb_onnx.run(None, {"images": onnx_image})[
             0
         ].squeeze()
-        addr_obb = self._post_process_yolo(image, padx, pady, scale, yolo_onnx_out)
+        addr_obb = self._post_process_yolo(
+            image, padx, pady, scale, yolo_onnx_out, expand_ratio
+        )
         return addr_obb
 
     def Classify_angle(self, image: np.ndarray):
@@ -146,8 +148,8 @@ class OCR_pipeline:
         return onnx_img, scale, pad_w, pad_h
 
     @staticmethod
-    def _post_process_yolo(origin_img, padx, pady, scale, yolo_onnx_out):
-        det_obb = get_best_obb(yolo_onnx_out)
+    def _post_process_yolo(origin_img, padx, pady, scale, yolo_onnx_out, expand_ratio):
+        det_obb = get_best_obb(yolo_onnx_out, expand_ratio)
         origin_obb = obb_letterbox_to_origin(det_obb, padx, pady, scale)
         tl, tr, bl, br = anyobb_to_tltrblbr(origin_obb)
         w = np.linalg.norm(bl - br).astype(np.int32).item()

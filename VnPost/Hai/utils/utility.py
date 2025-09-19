@@ -960,13 +960,13 @@ def obb_letterbox_to_origin(obb_letter_box, padx, pady, scale):
     return obb_origin
 
 
-def get_best_obb(yolo_onnx_out):
+def get_best_obb(yolo_onnx_out, expand_percent: float = 0):
     best_idx = yolo_onnx_out[:, 4].argsort()[::-1][0]
     best_box = yolo_onnx_out[best_idx].copy()
     if best_box[4] < 0.1:
         raise ValueError("No oriented bounding box detected.")
     best_box[-3:] = best_box[:-4:-1]
-    best_box[[2, 3]] = best_box[[2, 3]]
+    best_box[[2, 3]] = best_box[[2, 3]] * (1 + expand_percent / 100)
     padding_result = OBB(best_box, orig_shape=(640, 640))
     det_obb = padding_result.xyxyxyxy[0]
     return det_obb
