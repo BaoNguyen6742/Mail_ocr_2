@@ -959,6 +959,7 @@ def obb_letterbox_to_origin(obb_letter_box, padx, pady, scale):
     obb_origin /= scale
     return obb_origin
 
+
 def get_best_obb(yolo_onnx_out):
     best_idx = yolo_onnx_out[:, 4].argsort()[::-1][0]
     best_box = yolo_onnx_out[best_idx].copy()
@@ -969,3 +970,32 @@ def get_best_obb(yolo_onnx_out):
     padding_result = OBB(best_box, orig_shape=(640, 640))
     det_obb = padding_result.xyxyxyxy[0]
     return det_obb
+
+
+def obb_to_cropped(img: np.ndarray, bbox: np.ndarray, expand_ratio=1.2):
+    """
+    Crop and rotate image based on oriented bounding box (OBB).
+
+    Parameters
+    ----------
+    - img : `np.ndarray`
+        - Input image in HWC format.
+    - bbox : `np.ndarray`
+        - Oriented bounding box with shape (4,2) representing 4 corner points.
+        - Format: (x1, y1, x2, y2, x3, y3, x4, y4)
+    - expand_ratio : `float`
+        - Ratio to expand the bounding box for cropping.
+
+    Returns
+    -------
+    - cropped_img : `np.ndarray`
+        - Cropped and rotated image region defined by the OBB.
+    """
+    tl, tr, bl, br = anyobb_to_tltrblbr(bbox)
+    w = np.linalg.norm(bl - br).astype(np.int32).item()
+    h = np.linalg.norm(bl - tl).astype(np.int32).item()
+    origin_coord = np.float32([tl, tr, bl, br])
+    new_coord = np.float32([[0, 0], [w, 0], [0, h], [w, h]])
+    M = cv2.getPerspectiveTransform(origin_coord, new_coord)
+    cropped = cv2.warpPerspective(img, M, (w, h))
+    return cropped
