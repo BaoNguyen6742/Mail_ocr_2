@@ -972,7 +972,7 @@ def get_best_obb(yolo_onnx_out, expand_percent: float = 0):
     return det_obb
 
 
-def obb_to_cropped(img: np.ndarray, bbox: np.ndarray, expand_ratio=1.2):
+def obb_to_cropped(img: np.ndarray, bbox: np.ndarray):
     """
     Crop and rotate image based on oriented bounding box (OBB).
 

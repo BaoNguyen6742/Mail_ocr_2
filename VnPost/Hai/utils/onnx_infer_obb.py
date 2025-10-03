@@ -13,6 +13,7 @@ from .utility import (
     preprocess_paddle_det,
     process_input,
     translate_onnx,
+    obb_to_cropped,
 )
 
 
@@ -151,13 +152,8 @@ class OCR_pipeline:
     def _post_process_yolo(origin_img, padx, pady, scale, yolo_onnx_out, expand_ratio):
         det_obb = get_best_obb(yolo_onnx_out, expand_ratio)
         origin_obb = obb_letterbox_to_origin(det_obb, padx, pady, scale)
-        tl, tr, bl, br = anyobb_to_tltrblbr(origin_obb)
-        w = np.linalg.norm(bl - br).astype(np.int32).item()
-        h = np.linalg.norm(bl - tl).astype(np.int32).item()
-        origin_coord = np.float32([tl, tr, bl, br])
-        new_coord = np.float32([[0, 0], [w, 0], [0, h], [w, h]])
-        M = cv2.getPerspectiveTransform(origin_coord, new_coord)
-        cropped = cv2.warpPerspective(origin_img, M, (w, h))
+
+        cropped = obb_to_cropped(origin_img, origin_obb)
         return cropped
 
     @staticmethod
