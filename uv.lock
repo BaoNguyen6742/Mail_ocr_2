@@ -1089,6 +1089,7 @@ dependencies = [
     { name = "matplotlib" },
     { name = "onnx" },
     { name = "onnxruntime" },
+    { name = "onnxslim" },
     { name = "opencv-python-headless", version = "4.8.1.78", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "opencv-python-headless", version = "4.11.0.86", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "paddleocr", extra = ["doc-parser"] },
@@ -1109,6 +1110,7 @@ requires-dist = [
     { name = "matplotlib", specifier = ">=3.10.6" },
     { name = "onnx", specifier = ">=1.19.0" },
     { name = "onnxruntime", specifier = ">=1.22.1" },
+    { name = "onnxslim", specifier = ">=0.1.70" },
     { name = "opencv-python-headless", specifier = "<=4.11.0.86" },
     { name = "paddleocr", extras = ["doc-parser"], specifier = ">=3.2.0" },
     { name = "paddlepaddle", specifier = "==3.0.0" },
@@ -1688,6 +1690,22 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/4c/06/9c765e66ad32a7e709ce4cb6b95d7eaa9cb4d92a6e11ea97c20ffecaf765/onnxruntime-1.22.1-cp313-cp313-win_amd64.whl", hash = "sha256:70980d729145a36a05f74b573435531f55ef9503bcda81fc6c3d6b9306199982", size = 12690841, upload-time = "2025-07-10T19:15:58.337Z" },
     { url = "https://files.pythonhosted.org/packages/52/8c/02af24ee1c8dce4e6c14a1642a7a56cebe323d2fa01d9a360a638f7e4b75/onnxruntime-1.22.1-cp313-cp313t-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:33a7980bbc4b7f446bac26c3785652fe8730ed02617d765399e89ac7d44e0f7d", size = 14479333, upload-time = "2025-07-10T19:16:00.544Z" },
     { url = "https://files.pythonhosted.org/packages/5d/15/d75fd66aba116ce3732bb1050401394c5ec52074c4f7ee18db8838dd4667/onnxruntime-1.22.1-cp313-cp313t-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:6e7e823624b015ea879d976cbef8bfaed2f7e2cc233d7506860a76dd37f8f381", size = 16477261, upload-time = "2025-07-10T19:16:03.226Z" },
+]
+
+[[package]]
+name = "onnxslim"
+version = "0.1.70"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "colorama" },
+    { name = "ml-dtypes" },
+    { name = "onnx" },
+    { name = "packaging" },
+    { name = "sympy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/1c/6d/7096ff9a9f1b7d30b36cd51d63901186f55dcb84bbfa12d4db2dfa3b9994/onnxslim-0.1.70.tar.gz", hash = "sha256:d8a13a5b557075ef8520933aa48f883e801c1bfab25d6e7fa2e2eece10859b82", size = 141759, upload-time = "2025-09-30T03:03:08.51Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d8/1e/83bef9cf1d80e2fdb00415ed7f9294d81d84621540b20667bb333169df64/onnxslim-0.1.70-py3-none-any.whl", hash = "sha256:5dc5d3afe9e4266fcdf25a6288b70b72f5d60a16c86f9ffea7bbc7062a0e99ac", size = 164987, upload-time = "2025-09-30T03:03:07.355Z" },
 ]
 
 [[package]]
