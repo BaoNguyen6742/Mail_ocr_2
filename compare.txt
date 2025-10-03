@@ -1,9 +1,0 @@
-Colab
-    OBB: 
-        avg: 1.65s
-        CER: 0.9648
-        MER: 0.8967
-    Non_OBB: 
-        avg: 2.35s
-        CER: 0.8830
-        MER: 0.8818
