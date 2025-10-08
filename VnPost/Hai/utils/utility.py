@@ -114,7 +114,7 @@ def nms_classless(
     return np.stack(keep_boxes) if keep_boxes else np.empty((0, 5))
 
 
-def xywh2xyxy(x):
+def xywh2xyxy(x):  # noqa: F811
     # Convert [x, y, w, h] to [x1, y1, x2, y2]
     y = x.copy()
     y[..., 0] = x[..., 0] - x[..., 2] / 2
@@ -856,18 +856,46 @@ def is_vertical_box(boxes):
 #         pass
 
 
-def letter_box(img: np.ndarray, target_size: tuple[int, int] | int, color=(0, 0, 0)):
+def letter_box(
+    img: np.ndarray[tuple[int, int, int], np.dtype[np.uint8]],
+    target_size: tuple[int, int] | int,
+    color=(0, 0, 0),
+) -> tuple[
+    np.ndarray[tuple[int, int, int], np.dtype[np.uint8]],
+    float,
+    tuple[int, int],
+]:
     """
-    Resize and pad image to target size while maintaining aspect ratio.
+    Resize and pad image to fit the target size while maintaining aspect ratio.
 
-    Args:
-        img (np.ndarray): Input image in HWC format.
-        target_size (tuple or int): Target size as (width, height) or single int for square.
-        color (tuple): Padding color.
+    Behavior
+    --------
+    - Resize the image to fit within the target size while maintaining aspect ratio.
+    - Pad the resized image to match the target size using the specified color.
 
-    Returns:
-        np.ndarray: Resized and padded image.
+    Parameters
+    ----------
+    - img : `np.ndarray`
+        - Input image in HWC format.
+        - Shape: (height, width, channels)
+        - Dtype: np.uint8
+    - target_size : `tuple[int, int] | int` \\
+        Target size as (width, height) or single int for square.
+    - color : `tuple`. Optional, by default (0, 0, 0) \\
+        Padding color.
+
+    Returns
+    -------
+    - padded_img : `np.ndarray`
+        - Resized and padded image.
+        - Shape: (target_height, target_width, channels)
+        - Dtype: np.uint8
+    - scale : `float` \\
+        Scaling factor used during resizing.
+    - pad : `tuple[int, int]` \\
+        Padding applied as (pad_width, pad_height).
     """
+
     if isinstance(target_size, int):
         target_size = (target_size, target_size)
     h, w = img.shape[:2]
@@ -923,7 +951,15 @@ def anyobb_to_tltrblbr(obb: np.ndarray):
     return tltrblbr
 
 
-def obb_letterbox_to_origin(obb_letter_box, padx, pady, scale):
+def obb_letterbox_to_origin(
+    obb_letter_box: np.ndarray[tuple[int, int], np.dtype[np.float32]],
+    padx: int,
+    pady: int,
+    scale: float,
+) -> np.ndarray[
+    tuple[int, int],
+    np.dtype[np.float32],
+]:
     """
     Convert bounding box from letterbox coordinates back to original image coordinates.
 
@@ -938,13 +974,13 @@ def obb_letterbox_to_origin(obb_letter_box, padx, pady, scale):
         - Bounding box in letterbox coordinates
         - Format: (x1, y1, x2, y2, x3, y3, x4, y4)
         - Shape: (4, 2)
-    - padx : `int`
+        - Dtype: np.float32
+    - padx : `int` \\
         Padding in x direction.
-    - pady : `int`
+    - pady : `int` \\
         Padding in y direction.
-    - scale : `float`
+    - scale : `float` \\
         Scaling factor used during letterboxing.
-        _description_
 
     Returns
     -------
@@ -952,6 +988,7 @@ def obb_letterbox_to_origin(obb_letter_box, padx, pady, scale):
         - Bounding box in original image coordinates
         - Format: (x1, y1, x2, y2, x3, y3, x4, y4)
         - Shape: (4, 2)
+        - Dtype: np.float32
     """
     obb_origin = obb_letter_box.copy()
     obb_origin[:, 0] -= padx
@@ -960,36 +997,90 @@ def obb_letterbox_to_origin(obb_letter_box, padx, pady, scale):
     return obb_origin
 
 
-def get_best_obb(yolo_onnx_out, expand_percent: float = 0):
+def get_best_obb(
+    yolo_onnx_out: np.ndarray[tuple[int, int], np.dtype[np.float32]],
+    expand_percent: float = 0,
+) -> np.ndarray[
+    tuple[int, int],
+    np.dtype[np.float32],
+]:
+    """
+    Get the best oriented bounding box (OBB) from YOLO model output.
+
+    Behavior
+    --------
+    - Select the box with the highest confidence score.
+    - Optionally expand the box size by a given percentage.
+    - Convert box format from (x_center, y_center, width, height, angle) to
+      (x1, y1, x2, y2, x3, y3, x4, y4) using OBB utility.
+    - Raise an error if no box is detected with confidence > 0.1.
+
+    Parameters
+    ----------
+    - yolo_onnx_out : `np.ndarray`
+        - Output from YOLO model
+        - Shape: (N, 7) where each row is (x_center, y_center, width, height, confidence, class_id, angle)
+        - Dtype: np.float32
+    - expand_percent : `float`. Optional, by default 0
+        - Percentage to expand the box size.
+        - For example, 10 means increase width and height by 10%.
+
+    Returns
+    -------
+    - det_obb : `np.ndarray`
+        - The best oriented bounding box in (x1, y1, x2, y2, x3, y3, x4, y4) format.
+        - Shape: (4, 2)
+        - Dtype: np.float32
+
+    Raises
+    ------
+    ValueError
+        - If no oriented bounding box is detected with confidence > 0.1.
+    """
+
     best_idx = yolo_onnx_out[:, 4].argsort()[::-1][0]
     best_box = yolo_onnx_out[best_idx].copy()
     if best_box[4] < 0.1:
         raise ValueError("No oriented bounding box detected.")
-    best_box[-3:] = best_box[:-4:-1]
+    best_box[-3:] = best_box[[-1, -3, -2]]
     best_box[[2, 3]] = best_box[[2, 3]] * (1 + expand_percent / 100)
     padding_result = OBB(best_box, orig_shape=(640, 640))
     det_obb = padding_result.xyxyxyxy[0]
     return det_obb
 
 
-def obb_to_cropped(img: np.ndarray, bbox: np.ndarray):
+def obb_to_cropped(
+    img: np.ndarray[tuple[int, int, int], np.dtype[np.uint8]],
+    bbox: np.ndarray[tuple[int, int], np.dtype[np.float32]],
+) -> np.ndarray[tuple[int, int, int], np.dtype[np.uint8]]:
     """
-    Crop and rotate image based on oriented bounding box (OBB).
+    The cropped image extracted from the oriented bounding box (OBB).
+
+    Behavior
+    --------
+    - Convert OBB points to top-left, top-right, bottom-left, bottom-right order.
+    - Calculate width and height of the cropped area.
+    - Compute perspective transform matrix.
+    - Apply perspective warp to obtain the cropped image.
 
     Parameters
     ----------
     - img : `np.ndarray`
-        - Input image in HWC format.
+        - Input image to be cropped.
+        - Shape: (height, width, channels)
+        - Dtype: np.uint8
     - bbox : `np.ndarray`
         - Oriented bounding box with shape (4,2) representing 4 corner points.
         - Format: (x1, y1, x2, y2, x3, y3, x4, y4)
-    - expand_ratio : `float`
-        - Ratio to expand the bounding box for cropping.
+        - Shape: (4, 2)
+        - Dtype: np.float32
 
     Returns
     -------
-    - cropped_img : `np.ndarray`
-        - Cropped and rotated image region defined by the OBB.
+    - cropped : `np.ndarray`
+        - Cropped image.
+        - Shape: (new_height, new_width, channels)
+        - Dtype: np.uint8
     """
     tl, tr, bl, br = anyobb_to_tltrblbr(bbox)
     w = np.linalg.norm(bl - br).astype(np.int32).item()
