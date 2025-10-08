@@ -6,6 +6,7 @@ import torch
 from paddleocr import DocImgOrientationClassification, PaddleOCR
 from ultralytics import YOLO
 from ultralytics.engine.results import OBB, Results
+
 from .utility import anyobb_to_tltrblbr
 
 
@@ -38,7 +39,7 @@ def infer_obb_yolo(
     device: str,
     pad_pixel: None | list[int] | int,
     pad_scale: None | list[float] | float,
-) -> np.ndarray:
+) -> tuple[np.ndarray, list[np.ndarray]]:
     """
     Infer the oriented bounding box (OBB) for the given image using the YOLO model.
 
@@ -65,6 +66,8 @@ def infer_obb_yolo(
     -------
     - cropped : `np.ndarray`
         The cropped image containing the text area.
+    - [tl, tr, br, bl] : `np.ndarray`
+        The coordinates of the four corners of the text area.
 
     Raises
     ------
@@ -101,7 +104,7 @@ def infer_obb_yolo(
     new_coord = np.float32([[0, 0], [w, 0], [0, h], [w, h]])
     M = cv2.getPerspectiveTransform(origin_coord, new_coord)
     cropped = cv2.warpPerspective(image, M, (w, h))
-    return cropped
+    return cropped, [tl, tr, bl, br]
 
 
 class OCR_server_pipeline:
@@ -141,13 +144,53 @@ class OCR_server_pipeline:
 
         return yolo_obb, paddle_doc_cls, ocr_model
 
-    def ocr(self, image: np.ndarray, pad_pixel=None, pad_scale=None):
-        addr_obb = self.Detec_addr_obb(image, pad_pixel, pad_scale)
-        cropped_img = self.Rotate_image(addr_obb)
+    def ocr(
+        self,
+        image: np.ndarray,
+        pad_pixel: None | int | list[int] = None,
+        pad_scale: None | int | list[int] = None,
+        debug=False,
+    ):
+        """
+        Perform OCR on the given image.
+
+        Behavior
+        --------
+        This function detects the address area in the image, classifies its orientation,
+        and performs OCR on the cropped and rotated image.
+
+        Parameters
+        ----------
+        - image : `np.ndarray`
+            The input image to process.
+        - pad_pixel : `None | int | List[int]`. Optional, by default None
+            - The pixel padding to add to the image before inference.
+            - If a single integer is provided, it will be used for both width and height padding.
+        - pad_scale : `None | int | List[int]`. Optional, by default None
+            - The scale padding to apply to the image before inference.
+            - If a single float is provided, it will be used for both width and height padding.
+        - debug : `bool`. Optional, by default False
+            Whether to return debug information.
+
+        Returns
+        -------
+        -  : `Tuple[np.ndarray, List[str]]`
+            The cropped image and the recognized text.
+        """
+
+        addr_obb, tltrblbr = self._detec_addr_obb(
+            image,
+            pad_pixel,
+            pad_scale,
+        )
+        angle = self._classify_angle(addr_obb)
+        cropped_img = self._rotate_image(addr_obb, angle)
         sentences = self.ocr_model.predict(cropped_img)[0]["rec_texts"]
+        if debug:
+            return tltrblbr, angle, sentences
         return cropped_img, sentences
 
-    def Detec_addr_obb(self, image: np.ndarray, pad_pixel, pad_scale):
+    def _detec_addr_obb(self, image: np.ndarray, pad_pixel, pad_scale):
         addr_obb = infer_obb_yolo(
             self.yolo_obb,
             image,
@@ -157,7 +200,11 @@ class OCR_server_pipeline:
         )
         return addr_obb
 
-    def Rotate_image(self, image: np.ndarray):
+    def _classify_angle(self, image: np.ndarray):
+        angle = int(self.paddle_doc_cls.predict(image)[0]["label_names"][0])
+        return angle
+
+    def _rotate_image(self, image: np.ndarray, angle: int):
         """
         Rotate the image based on the predicted angle.
 
@@ -175,8 +222,6 @@ class OCR_server_pipeline:
         - rotate_img : `np.ndarray`
             The rotated image.
         """
-        angle = int(self.paddle_doc_cls.predict(image)[0]["label_names"][0])
-        height, width = image.shape[:2]
         if angle:
             rotate_img = cv2.rotate(image, int(3 - (angle / 90)))
         else:
