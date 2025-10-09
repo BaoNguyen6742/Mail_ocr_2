@@ -34,12 +34,15 @@ def get_config_path(filename: str):
 
 
 def infer_obb_yolo(
-    yolo_model,
-    image: np.ndarray,
+    yolo_model: YOLO,
+    image: np.ndarray[tuple[int, int, int], np.dtype[np.uint8]],
     device: str,
     pad_pixel: None | list[int] | int,
     pad_scale: None | list[float] | float,
-) -> tuple[np.ndarray, list[np.ndarray]]:
+) -> tuple[
+    np.ndarray[tuple[int, int, int], np.dtype[np.uint8]],
+    list[np.ndarray[tuple[int, int], np.dtype[np.float32]]],
+]:
     """
     Infer the oriented bounding box (OBB) for the given image using the YOLO model.
 
@@ -49,11 +52,13 @@ def infer_obb_yolo(
 
     Parameters
     ----------
-    - yolo_model : `YOLO`
+    - yolo_model : `YOLO` \\
         The YOLO model to use for inference.
-    - image : `np.ndarray`
-        The input image for which to infer the OBB. The image in format HWC with BGR color channel with pixel value unit8
-    - device : `str`
+    - image : `np.ndarray[tuple[int, int, int], np.dtype[np.uint8]]`
+        - The input image for which to infer the OBB.
+        - Shape: (H, W, 3), where H is the height, W is the width, and 3 represents the BGR channels.
+        - Dtype: uint8
+    - device : `str` \\
         The device to run the inference on (e.g., "cuda" or "cpu").
     - pad_pixel : `None | list[int] | int`
         - The padding in pixel to add to the image before inference.
@@ -64,10 +69,14 @@ def infer_obb_yolo(
 
     Returns
     -------
-    - cropped : `np.ndarray`
-        The cropped image containing the text area.
-    - [tl, tr, br, bl] : `np.ndarray`
-        The coordinates of the four corners of the text area.
+    - cropped : `np.ndarray[tuple[int, int, int], np.dtype[np.uint8]]`
+        - The cropped image containing the text area.
+        - Shape: (H', W', 3), where H' and W' are the height and width of the cropped image.
+        - Dtype: uint8
+    - [tl, tr, br, bl] : `np.ndarray[tuple[int, int], np.dtype[np.float32]]`
+        - The coordinates of the four corners of the text area.
+        - Shape: (4, 2), where each row is a point (x, y).
+        - Dtype: float32
 
     Raises
     ------
