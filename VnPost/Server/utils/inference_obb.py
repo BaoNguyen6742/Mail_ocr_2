@@ -159,6 +159,16 @@ class OCR_server_pipeline:
         pad_pixel: None | int | list[int] = None,
         pad_scale: None | int | list[int] = None,
         debug=False,
+    ) -> (
+        tuple[
+            np.ndarray[tuple[int, int, int], np.dtype[np.uint8]],
+            list[str],
+        ]
+        | tuple[
+            list[np.ndarray[tuple[int, int], np.dtype[np.float32]]],
+            int,
+            list[str],
+        ]
     ):
         """
         Perform OCR on the given image.
@@ -170,21 +180,34 @@ class OCR_server_pipeline:
 
         Parameters
         ----------
-        - image : `np.ndarray`
-            The input image to process.
+        - image : `np.ndarray[tuple[int, int, int], np.dtype[np.uint8]]`
+            - The input image to process.
+            - Shape: (H, W, 3), where H is the height, W is the width, and 3 represents the BGR channels.
+            - Dtype: uint8
         - pad_pixel : `None | int | List[int]`. Optional, by default None
             - The pixel padding to add to the image before inference.
             - If a single integer is provided, it will be used for both width and height padding.
         - pad_scale : `None | int | List[int]`. Optional, by default None
             - The scale padding to apply to the image before inference.
             - If a single float is provided, it will be used for both width and height padding.
-        - debug : `bool`. Optional, by default False
+        - debug : `bool`. Optional, by default False \\
             Whether to return debug information.
 
         Returns
         -------
-        -  : `Tuple[np.ndarray, List[str]]`
-            The cropped image and the recognized text.
+        - cropped_img : `np.ndarray[tuple[int, int, int], np.dtype[np.uint8]]`
+            - The cropped and rotated image containing the address area.
+            - Shape: (H', W', 3), where H' and W' are the height and width of the cropped image.
+            - Dtype: uint8
+        - sentences : `list[str]`
+            - A list of strings representing the recognized text from the OCR process.
+        - tltrblbr : `list[np.ndarray[tuple[int, int], np.dtype[np.float32]]]`
+            - A list of four numpy arrays representing the coordinates of the four corners of the address area.
+            - Each array has shape (2,), representing a point (x, y).
+            - Dtype: float32
+        - angle : `int`
+            - The predicted orientation angle of the document image.
+            - One of {0, 90, 180, 270} degrees.
         """
 
         addr_obb, tltrblbr = self._detec_addr_obb(
