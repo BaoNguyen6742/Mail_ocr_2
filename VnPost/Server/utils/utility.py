@@ -33,7 +33,9 @@ def rotate_toward_angle(image: np.ndarray, angle: float):
     return cv2.warpAffine(image, M, (new_w, new_h))
 
 
-def anyobb_to_tltrblbr(obb: np.ndarray):
+def anyobb_to_tltrblbr(
+    obb: np.ndarray[tuple[int, int], np.dtype[np.float32]],
+) -> np.ndarray[tuple[int, int], np.dtype[np.float32]]:
     """
     Convert any order of 4 points of an oriented bounding box (OBB) to
     top-left, top-right, bottom-left, bottom-right order.
@@ -44,17 +46,20 @@ def anyobb_to_tltrblbr(obb: np.ndarray):
     - Determine the quadrant of each point relative to the center
     - Sort points based on their quadrant to achieve the desired order
 
-
     Parameters
     ----------
-    - obb : `np.ndarray`
-        - Array of shape (4, 2) representing the 4 corner points of the OBB.
+    - obb : `np.ndarray[tuple[int, int], np.dtype[np.float32]]`
+        - Array representing the 4 corner points of the OBB.
+        - Shape: (4, 2), where each row is a point (x, y).
+        - Dtype: float32
 
     Returns
     -------
-    - tltrblbr : `np.ndarray`
-        - Array of shape (4, 2) representing the 4 corner points of the OBB in
+    - tltrblbr : `np.ndarray[tuple[int, int], np.dtype[np.float32]]`
+        - Array representing the 4 corner points of the OBB in
         top-left, top-right, bottom-left, bottom-right order.
+        - Shape: (4, 2), where each row is a point (x, y).
+        - Dtype: float32
     """
 
     center = obb.mean(axis=0)
