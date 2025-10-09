@@ -222,21 +222,88 @@ class OCR_server_pipeline:
             return tltrblbr, angle, sentences
         return cropped_img, sentences
 
-    def _detec_addr_obb(self, image: np.ndarray, pad_pixel, pad_scale):
-        addr_obb = infer_obb_yolo(
+    def _detec_addr_obb(
+        self,
+        image: np.ndarray[tuple[int, int, int], np.dtype[np.uint8]],
+        pad_pixel: None | int | list[int],
+        pad_scale: None | int | list[float],
+    ) -> tuple[
+        np.ndarray[tuple[int, int, int], np.dtype[np.uint8]],
+        list[np.ndarray[tuple[int, int], np.dtype[np.float32]]],
+    ]:
+        """
+        Detect the address oriented bounding box (OBB) in the image.
+
+        Behavior
+        --------
+        - Uses a YOLO model to detect the oriented bounding box (OBB) of the address area in the input image.
+        - Applies padding to the image if specified.
+
+        Parameters
+        ----------
+        - image : `np.ndarray[tuple[int, int, int], np.dtype[np.uint8]]`
+            - The input image in which to detect the address OBB.
+            - Shape: (H, W, 3), where H is the height, W is the width, and 3 represents the BGR channels.
+            - Dtype: uint8
+        - pad_pixel : `None | int | list[int]`
+            - The pixel padding to add to the image before inference.
+            - If a single integer is provided, it will be used for both width and height padding.
+        - pad_scale : `None | int | list[float]`
+            - The scale padding to apply to the image before inference.
+            - If a single float is provided, it will be used for both width and height padding.
+
+        Returns
+        -------
+        - addr_obb : `np.ndarray[tuple[int, int, int], np.dtype[np.uint8]]`
+            - The cropped image containing the address area.
+            - Shape: (H', W', 3), where H' and W' are the height and width of the cropped image.
+            - Dtype: uint8
+        - tltrblbr : `list[np.ndarray[tuple[int, int], np.dtype[np.float32]]]`
+            - A list of four numpy arrays representing the coordinates of the four corners of the address area.
+            - Each array has shape (2,), representing a point (x, y).
+            - Dtype: float32
+        """
+        addr_obb, tltrblbr = infer_obb_yolo(
             self.yolo_obb,
             image,
             self.device,
             pad_pixel,
             pad_scale,
         )
-        return addr_obb
+        return addr_obb, tltrblbr
 
-    def _classify_angle(self, image: np.ndarray):
+    def _classify_angle(
+        self, image: np.ndarray[tuple[int, int, int], np.dtype[np.uint8]]
+    ) -> int:
+        """
+        Classify the orientation angle of the document image.
+
+        Behavior
+        --------
+        - Uses a document image orientation classification model to predict the angle of the input image.
+        - The predicted angle is one of {0, 90, 180, 270} degrees.
+
+        Parameters
+        ----------
+        - image : `np.ndarray[tuple[int, int, int], np.dtype[np.uint8]]`
+            - The input image for which to classify the orientation angle.
+            - Shape: (H, W, 3), where H is the height, W is the width, and 3 represents the BGR channels.
+            - Dtype: uint8
+
+        Returns
+        -------
+        - angle : `int`
+            - The predicted orientation angle of the document image.
+            - One of {0, 90, 180, 270} degrees.
+        """
         angle = int(self.paddle_doc_cls.predict(image)[0]["label_names"][0])
         return angle
 
-    def _rotate_image(self, image: np.ndarray, angle: int):
+    def _rotate_image(
+        self,
+        image: np.ndarray[tuple[int, int, int], np.dtype[np.uint8]],
+        angle: int,
+    ) -> np.ndarray[tuple[int, int, int], np.dtype[np.uint8]]:
         """
         Rotate the image based on the predicted angle.
 
@@ -246,13 +313,20 @@ class OCR_server_pipeline:
 
         Parameters
         ----------
-        - image : `np.ndarray`
-            The input image to rotate.
+        - image : `np.ndarray[tuple[int, int, int], np.dtype[np.uint8]]`
+            - The input image to rotate.
+            - Shape: (H, W, 3), where H is the height, W is the width, and 3 represents the BGR channels.
+            - Dtype: uint8
+        - angle : `int`
+            - The angle by which to rotate the image. One of {0, 90, 180, 270} degrees.
+            - An angle of 0 means no rotation is needed.
 
         Returns
         -------
-        - rotate_img : `np.ndarray`
-            The rotated image.
+        - rotate_img : `np.ndarray[tuple[int, int, int], np.dtype[np.uint8]]`
+            - The rotated image.
+            - Shape: (H', W', 3), where H' and W' are the height and width of the rotated image.
+            - Dtype: uint8
         """
         if angle:
             rotate_img = cv2.rotate(image, int(3 - (angle / 90)))
