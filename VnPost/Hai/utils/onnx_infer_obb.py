@@ -40,7 +40,35 @@ class OCR_pipeline:
         self,
         image: np.ndarray[tuple[int, int, int], np.dtype[np.uint8]],
         expand_ratio: float = 0,
-    ):
+    ) -> tuple[
+        np.ndarray[tuple[int, int, int], np.dtype[np.uint8]],
+        str,
+    ]:
+        """
+        Perform OCR on the input image.
+
+        Behavior
+        --------
+        This function orchestrates the OCR process by first detecting the address region using an oriented bounding box (OBB) model, then classifying the orientation of the detected region, rotating it to the correct orientation, and finally recognizing the text within the rotated image.
+        
+        Parameters
+        ----------
+        - image : `np.ndarray[tuple[int, int, int], np.dtype[np.uint8]]`
+            - The input image in BGR format.
+            - Shape: (height, width, channels)
+            - Dtype: np.uint8        
+        - expand_ratio : `float`. Optional, by default 0 \\
+            The ratio by which to expand the bounding box during cropping.
+
+        Returns
+        -------
+        - rotated : `tuple[np.ndarray[tuple[int, int, int], np.dtype[np.uint8]]`
+            - The cropped image of the detected OBB and the recognized text.
+            - Shape: (cropped_height, cropped_width, channels)
+            - Dtype: np.uint8
+        - sentences : `str` \\
+            The recognized text from the image.
+        """
         sentences = ""
         addr_img = self._detec_addr_obb(image, expand_ratio)
         angle = self._classify_angle(addr_img)
